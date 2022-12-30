@@ -56,7 +56,7 @@ for (const file of commandFiles) {
 
 client.on('ready', async (client) => {
   console.log(`==== Logged in: ${client.user.tag} ====`)
-  const channel = await client.channels.fetch('1058034881516556299', {
+  const channel = await client.channels.fetch('1045530787723874347', {
     type: 'Category',
   })
   const textChannels = channel.children.cache.filter(
