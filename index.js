@@ -54,8 +54,21 @@ for (const file of commandFiles) {
   }
 }
 
-client.on('ready', () => {
+client.on('ready', async (client) => {
   console.log(`==== Logged in: ${client.user.tag} ====`)
+  const channel = await client.channels.fetch('1058034881516556299', {
+    type: 'Category',
+  })
+  const textChannels = channel.children.cache.filter(
+    (child) =>
+      child.name !== 'createchannel' && child.type === ChannelType.GuildText
+  )
+
+  textChannels.forEach((tc) => {
+    const vcId = tc.topic
+    const vc = channel.children.cache.find((child) => child.id === vcId)
+    createChannels.push({ vc, tc })
+  })
 })
 //メンションに「Hi!」と返信
 
@@ -209,7 +222,6 @@ client.on('interactionCreate', async (interaction) => {
     const TCId = interaction.channel.id
 
     const channelsetIndex = createChannels.findIndex((channelset) => {
-      console.log(TCId, channelset.tc.id)
       return channelset.tc.id === TCId
     })
     const value = interaction.fields.getTextInputValue('roomReName')
