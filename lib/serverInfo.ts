@@ -1,4 +1,4 @@
-const serverInfo = [
+export const serverInfo = [
   {
     serverName: "LOLを楽しみたい",
     guildId: "1053191474898010203",
@@ -8,6 +8,3 @@ const serverInfo = [
     createRoomCategory: "1058034881516556299",
   },
 ];
-module.exports = {
-  serverInfo,
-};
