@@ -56,7 +56,7 @@ for (const file of commandFiles) {
 
 client.on('ready', async (client) => {
   console.log(`==== Logged in: ${client.user.tag} ====`)
-  const channel = await client.channels.fetch('1058034881516556299', {
+  const channel = await client.channels.fetch('105803488116556299', {
     type: 'Category',
   })
   const textChannels = channel.children.cache.filter(
@@ -77,19 +77,21 @@ client.on('messageCreate', async (message) => {
   if (message.mentions.users.has(client.user.id)) {
     message.reply('ぐまゆしです')
   }
-  const server = serverInfo.find((server) => server.guildId == message.guild.id)
+  const server = serverInfo.find(
+    (server) => server.guildId === message.guild.id
+  )
   if (!message.member) return
-  if (message.system || message.member.user.bot == true) {
+  if (message.system || message.member.user.bot === true) {
     console.log('システムまたはbotのメッセージ')
     return
   }
 
   const { channel } = message
-  if (message.content.startsWith(`!dl`) && message.guild) {
+  if (message.content.startsWith('!dl') && message.guild) {
     const messages = await channel.messages.fetch({ limit: 100 })
     const mentionMembers = await message.mentions.members.map((m) => m.user.id)
     const mentionFilter = await messages.filter((msg) =>
-      mentionMembers.some((userID) => userID == msg.author.id)
+      mentionMembers.some((userID) => userID === msg.author.id)
     )
     await channel.send({
       content: `<@${mentionMembers}>の直近100件のメッセージを消しました`,
@@ -133,10 +135,10 @@ client.on('messageCreate', async (message) => {
       'ティアリストを見たい方はこちらで選んでください'
     )
   }
-  if (serverInfo.some((server) => server.guildId == message.guild.id)) {
-    if (serverInfo.some((server) => server.sleepText == message.channelId)) {
+  if (serverInfo.some((server) => server.guildId === message.guild.id)) {
+    if (serverInfo.some((server) => server.sleepText === message.channelId)) {
       const server = serverInfo.find(
-        (server) => server.guildId == message.guild.id
+        (server) => server.guildId === message.guild.id
       )
       const memberChk = message.mentions.members.size !== 1
       const member = await message.mentions.members.first()
@@ -145,7 +147,6 @@ client.on('messageCreate', async (message) => {
       switch (message.content) {
         case 'n!s':
           return channel.send('メンバーを1人指定して！')
-          break
         case `<@${sleepMember}>`:
           if (!member.voice.channel) {
             return channel.send('この人はVCに居ないよ？')
@@ -153,16 +154,15 @@ client.on('messageCreate', async (message) => {
           const channel = message.guild.channels.cache.get(server.sleepVc)
           await member.voice.setChannel(channel)
           return channel.send(`${member}を寝落ち部屋に送ったよ！`)
-          break
       }
     }
   }
 })
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
-  if (serverInfo.some((server) => server.guildId == newState.guild.id)) {
+  if (serverInfo.some((server) => server.guildId === newState.guild.id)) {
     const isChangeChannel =
-      oldState.channelId != undefined && newState.channelId != undefined
+      oldState.channelId !== undefined && newState.channelId !== undefined
     if (isChangeChannel) {
       const newVCId = oldState.channel.id
       const channelset = createChannels.find(
@@ -175,7 +175,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
       }
     }
     const isLeaveChannel =
-      oldState.channelId != undefined && newState.channelId == undefined
+      oldState.channelId !== undefined && newState.channelId === undefined
     if (isLeaveChannel) {
       const newVCId = oldState.channel.id
       const channelset = createChannels.find(
@@ -192,7 +192,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
 client.on('interactionCreate', async (interaction) => {
   const server = serverInfo.find(
-    (server) => server.guildId == interaction.guild.id
+    (server) => server.guildId === interaction.guild.id
   )
 
   if (interaction.isChatInputCommand()) {
@@ -218,7 +218,7 @@ client.on('interactionCreate', async (interaction) => {
     const modal = ReNameModalBuilder()
     await interaction.showModal(modal) // 5
   }
-  if (interaction.customId == 'ReNameModalFom') {
+  if (interaction.customId === 'ReNameModalFom') {
     const TCId = interaction.channel.id
 
     const channelsetIndex = createChannels.findIndex((channelset) => {
@@ -241,11 +241,11 @@ client.on('interactionCreate', async (interaction) => {
     })
     return
   }
-  if (interaction.customId == 'memberLimitSet') {
+  if (interaction.customId === 'memberLimitSet') {
     const modal = MemberLimitSetModalBuilder()
     await interaction.showModal(modal) // 5
   }
-  if (interaction.customId == 'memberLimitSetFom') {
+  if (interaction.customId === 'memberLimitSetFom') {
     const nowVc = interaction.member.voice.channel
     const value = interaction.fields.getTextInputValue('setLimit')
     await nowVc.setUserLimit(value)
@@ -254,11 +254,11 @@ client.on('interactionCreate', async (interaction) => {
       ephemeral: true,
     })
   }
-  if (interaction.customId == 'roomButton') {
+  if (interaction.customId === 'roomButton') {
     const modal = SetRoomNameModalBuilder()
     await interaction.showModal(modal) // 5
   }
-  if (interaction.customId == 'RoomButtonFom') {
+  if (interaction.customId === 'RoomButtonFom') {
     const value = interaction.fields.getTextInputValue('roomName')
     const newVc = await interaction.guild.channels.create({
       name: `${value}`,
@@ -284,21 +284,21 @@ client.on('interactionCreate', async (interaction) => {
       `${interaction.member}\n以下のボタンから操作を選んでください`
     )
   }
-  if (interaction.customId == 'buildButton') {
+  if (interaction.customId === 'buildButton') {
     const championBuildSearchModal = ChampionBuildSearchModalBuilder()
     await interaction.showModal(championBuildSearchModal) // 5
   }
-  if (interaction.customId == 'buildButtonFom') {
+  if (interaction.customId === 'buildButtonFom') {
     const searchChampionName =
       interaction.fields.getTextInputValue('searchChampionName')
 
     replayChampionInfoURL(interaction, 'build', searchChampionName)
   }
-  if (interaction.customId == 'matchUpButton') {
+  if (interaction.customId === 'matchUpButton') {
     const modal = ChampionMatchUpSearchModalBuilder()
     await interaction.showModal(modal) // 5
   }
-  if (interaction.customId == 'matchupButtonFom') {
+  if (interaction.customId === 'matchupButtonFom') {
     const searchChampionName = interaction.fields.getTextInputValue(
       'matchUpSearchChampionName'
     )
@@ -307,12 +307,12 @@ client.on('interactionCreate', async (interaction) => {
     return
   }
 
-  if (interaction.customId == 'opggButton') {
+  if (interaction.customId === 'opggButton') {
     const opggModal = OpggModalBuilder()
     await interaction.showModal(opggModal)
   }
 
-  if (interaction.customId == 'opggButtonFom') {
+  if (interaction.customId === 'opggButtonFom') {
     const searchSamonerName =
       interaction.fields.getTextInputValue('samonerName')
 
