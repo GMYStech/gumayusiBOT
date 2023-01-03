@@ -1,12 +1,8 @@
 const {
   Client,
   ChannelType,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  ModalBuilder,
   GatewayIntentBits,
-  TextInputBuilder,
+  Collection,
 } = require("discord.js");
 const { serverInfo } = require("./lib/serverInfo.js");
 const { showComponent, replayChampionInfoURL } = require("./lib/utils.js");
@@ -23,7 +19,10 @@ const {
   JumpPointBuilder,
   OpggModalBuilder,
 } = require("./lib/customBuilder.js");
-
+const fs = require("node:fs");
+const path = require("node:path");
+const dotenv = require("dotenv");
+dotenv.config();
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -34,9 +33,59 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates,
   ],
 });
+client.commands = new Collection();
 
-client.on("ready", () => {
+const createChannels = [];
+const commandsPath = path.join(__dirname, "commands");
+const commandFiles = fs
+  .readdirSync(commandsPath)
+  .filter((file) => file.endsWith(".js"));
+
+for (const file of commandFiles) {
+  const filePath = path.join(commandsPath, file);
+  const command = require(filePath);
+  // Set a new item in the Collection with the key as the command name and the value as the exported module
+  if ("data" in command && "execute" in command) {
+    client.commands.set(command.data.name, command);
+  } else {
+    console.log(
+      `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+    );
+  }
+}
+
+const updateCreateChannels = async () => {
+  const channel = await client.channels.fetch(
+    serverInfo[0].createRoomCategory,
+    {
+      type: "Category",
+    }
+  );
+  const textChannels = channel.children.cache.filter(
+    (child) =>
+      child.id !== "1057885109367361647" && child.type === ChannelType.GuildText
+  );
+
+  textChannels.forEach((tc) => {
+    const vcId = tc.topic;
+    const vc = channel.children.cache.find((child) => child.id === vcId);
+    createChannels.push({ vc, tc });
+  });
+  console.log("-----------------------");
+  createChannels.forEach((channel) => {
+    const { vc, tc } = channel;
+    console.log({
+      vc: { name: vc.name, id: vc.id },
+      tc: { name: tc.name, id: tc.id },
+    });
+  });
+  console.log("-----------------------");
+};
+
+client.on("ready", async (client) => {
   console.log(`==== Logged in: ${client.user.tag} ====`);
+  console.log("--------ready---------");
+  await updateCreateChannels();
 });
 //メンションに「Hi!」と返信
 
@@ -67,8 +116,6 @@ client.on("messageCreate", async (message) => {
     });
     channel.bulkDelete(mentionFilter); // それらのメッセージを一括削除
   }
-
-  const msgFunc = () => {};
 
   if (message.content === "9192631770") {
     const members = await message.guild.members.fetch(); // メンバーを全員取得
@@ -110,21 +157,20 @@ client.on("messageCreate", async (message) => {
       const server = serverInfo.find(
         (server) => server.guildId == message.guild.id
       );
+      const sleepText = message.guild.channels.cache.get(server.sleepText);
       const memberChk = message.mentions.members.size !== 1;
       const member = await message.mentions.members.first();
       const sleepMember = await message.mentions.members.map((m) => m.user.id);
       console.log(`${member}`);
       switch (message.content) {
-        case "n!s":
-          return channel.send("メンバーを1人指定して！");
-          break;
         case `<@${sleepMember}>`:
           if (!member.voice.channel) {
-            return channel.send("この人はVCに居ないよ？");
+            return sleepText.send("この人はVCに居ないよ？");
           }
-          const channel = message.guild.channels.cache.get(server.sleepVc);
-          await member.voice.setChannel(channel);
-          return channel.send(`${member}を寝落ち部屋に送ったよ！`);
+          const sleepChannel = message.guild.channels.cache.get(server.sleepVc);
+
+          await member.voice.setChannel(sleepChannel);
+          return sleepText.send(`${member}を寝落ち部屋に送ったよ！`);
           break;
       }
     }
@@ -133,53 +179,68 @@ client.on("messageCreate", async (message) => {
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
   if (serverInfo.some((server) => server.guildId == newState.guild.id)) {
-    const server = serverInfo.find(
-      (server) => server.guildId == newState.guild.id
-    );
+    if (
+      createChannels.some((channel) => channel.vc.id === oldState.channelId)
+    ) {
+      const newVCId = oldState.channel.id;
+      const isChangeChannel =
+        oldState.channelId != undefined && newState.channelId != undefined;
+      if (isChangeChannel) {
+        const channelset = createChannels.find((channelset) => {
+          if (channelset.vc) {
+            return channelset.vc.id === newVCId;
+          }
+        });
+        if (channelset) {
+          if (channelset.vc.members.size === 0) {
+            await channelset.vc.delete();
+            await channelset.tc.delete();
 
-    const isChangeChannel =
-      oldState.channelId != undefined && newState.channelId != undefined;
-    if (isChangeChannel) {
-      const chId = oldState.channel.id;
-      const newTc = oldState.guild.channels.cache.find(
-        (channel) => channel.topic === `${chId}`
-      );
-
-      await oldState.channel.parent.children.cache.map(async (channel) => {
-        if (
-          channel.id != server.createRoom &&
-          channel.type === ChannelType.GuildVoice &&
-          channel.members.size === 0
-        ) {
-          await newTc.delete();
-          await channel.delete();
+            createChannels.forEach((channels, i) => {
+              if (!channels.vc) {
+                channels.tc.delete();
+              } else if (!channels.tc) {
+                channels.vc.delete();
+              }
+            });
+            await updateCreateChannels();
+          }
+        } else {
+          throw new Error(
+            `channel move : channelset not found.  notFoundVCID: ${newVCId}`
+          );
         }
-      });
+      }
     }
+  }
+  if (createChannels.some((channel) => channel.vc.id === oldState.channelId)) {
     const isLeaveChannel =
       oldState.channelId != undefined && newState.channelId == undefined;
     if (isLeaveChannel) {
-      if (
-        serverInfo.some(
-          (server) => server.createRoomCategory == oldState.channel.parentId
-        )
-      ) {
-        const chId = oldState.channel.id;
+      const newVCId = oldState.channel.id;
+      const channelset = createChannels.find((channelset) => {
+        if (channelset.vc) {
+          return channelset.vc.id === newVCId;
+        }
+      });
 
-        const newTc = oldState.guild.channels.cache.find(
-          (channel) => channel.topic === `${chId}`
+      if (channelset) {
+        if (channelset.vc.members.size === 0) {
+          await channelset.vc.delete();
+          await channelset.tc.delete();
+          createChannels.forEach((channels, i) => {
+            if (!channels.vc) {
+              channels.tc.delete();
+            } else if (!channels.tc) {
+              channels.vc.delete();
+            }
+          });
+          await updateCreateChannels();
+        }
+      } else {
+        throw new Error(
+          `channel leave : channelset not found. notFoundVCID: ${newVCId}`
         );
-
-        await oldState.channel.parent.children.cache.map(async (channel) => {
-          if (
-            channel.id != server.createRoom &&
-            channel.type == ChannelType.GuildVoice &&
-            channel.members.size == 0
-          ) {
-            await newTc.delete();
-            await channel.delete();
-          }
-        });
       }
     }
   }
@@ -189,33 +250,53 @@ client.on("interactionCreate", async (interaction) => {
   const server = serverInfo.find(
     (server) => server.guildId == interaction.guild.id
   );
+
+  if (interaction.isChatInputCommand()) {
+    const command = interaction.client.commands.get(interaction.commandName);
+
+    if (!command) {
+      console.error(
+        `No command matching ${interaction.commandName} was found.`
+      );
+      return;
+    }
+
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      console.error(error);
+      await interaction.reply({
+        content: "There was an error while executing this command!",
+        ephemeral: true,
+      });
+    }
+  }
+
   if (interaction.customId === "ReNameModal") {
     const modal = ReNameModalBuilder();
     await interaction.showModal(modal); // 5
   }
   if (interaction.customId == "ReNameModalFom") {
-    const nowVc = interaction.member.voice.channel;
+    const TCId = interaction.channel.id;
 
-    if (interaction.channel.parentId == server.createRoomCategory) {
-      if (
-        interaction.channel.members.some((x) => x.id == interaction.member.id)
-      ) {
-        const value = interaction.fields.getTextInputValue("roomReName");
-        await interaction.channel.setName(value);
-        await nowVc.setName(value);
-
-        interaction.reply({
-          content: "部屋名を変更しました。",
-          ephemeral: true,
-        });
-        return;
-      } else {
-        return await interaction.reply({
-          content: "VCに入らないと設定できないよ。",
-          ephemeral: true,
-        });
-      }
+    const channelset = createChannels.find((channelset) => {
+      return channelset.tc.id === TCId;
+    });
+    const value = interaction.fields.getTextInputValue("roomReName");
+    let newVc;
+    let newTc;
+    try {
+      await createChannels.vc.setName(value);
+      await createChannels.tc.setName(value);
+    } catch (er) {
+      console.log(er);
     }
+    await updateCreateChannels();
+    interaction.reply({
+      content: "名前の変更をしました。",
+      ephemeral: true,
+    });
+    return;
   }
   if (interaction.customId == "memberLimitSet") {
     const modal = MemberLimitSetModalBuilder();
@@ -236,7 +317,7 @@ client.on("interactionCreate", async (interaction) => {
   }
   if (interaction.customId == "RoomButtonFom") {
     const value = interaction.fields.getTextInputValue("roomName");
-    let newVc = await interaction.guild.channels.create({
+    const newVc = await interaction.guild.channels.create({
       name: `${value}`,
       type: ChannelType.GuildVoice,
       parent: server.createRoomCategory,
@@ -246,16 +327,18 @@ client.on("interactionCreate", async (interaction) => {
       type: ChannelType.GuildText,
       parent: server.createRoomCategory,
     });
+
     await newTc.setTopic(newVc.id);
     interaction.reply({
       content: "生成しました",
       ephemeral: true,
     });
+    createChannels.push({ vc: newVc, tc: newTc });
     const roomSettingButtons = RoomSettingButtonsBuilder();
     await showComponent(
       newTc,
       roomSettingButtons,
-      `${interaction.member}\n以下のボタンから操作を選んでください`
+      `${interaction.member}\n以下のボタンから操作を選んでください\n部屋名の変更は10分間に一回のみなので、エラーが出た場合は10分後に再度お試し下さい`
     );
   }
   if (interaction.customId == "buildButton") {
@@ -295,6 +378,12 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true,
     });
   }
+});
+
+client.on("error", async (error) => {
+  const errorChannel = await client.channels.fetch("1059064447827722302");
+  console.error(error);
+  errorChannel.send(`Erorr: ${error.message}`);
 });
 
 client.login(process.env.DISCORD_BOT_TOKEN);

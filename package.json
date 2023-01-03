@@ -7,12 +7,15 @@
     "node": "16.x"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "commandsDeploy": "node ./scripts/deploy-commands.js"
   },
   "dependencies": {
     "discord.js": "^14.7.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "dotenv": "^16.0.3"
+  },
   "prettier": {
     "semi": false,
     "singleQuote": true
