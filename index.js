@@ -89,73 +89,71 @@ client.on("ready", async (client) => {
 });
 //メンションに「Hi!」と返信
 
-client.on("messageCreate", async (message) => {
-  console.log(`▶ [${message.author.tag}] ${message.content}`);
+client.on('messageCreate', async (message) => {
+  console.log(`▶ [${message.author.tag}] ${message.content}`)
   if (message.mentions.users.has(client.user.id)) {
-    message.reply("ぐまゆしです");
+    message.reply('ぐまゆしです')
   }
-  const server = serverInfo.find(
-    (server) => server.guildId == message.guild.id
-  );
-  if (!message.member) return;
-  if (message.system || message.member.user.bot == true) {
-    console.log("システムまたはbotのメッセージ");
-    return;
+  const server = serverInfo.find((server) => server.guildId === message.guild.id)
+  if (!message.member) return
+  if (message.system || message.member.user.bot === true) {
+    console.log('システムまたはbotのメッセージ')
+    return
   }
 
-  const { channel } = message;
-  if (message.content.startsWith(`!dl`) && message.guild) {
-    const messages = await channel.messages.fetch({ limit: 100 });
-    const mentionMembers = await message.mentions.members.map((m) => m.user.id);
+  const { channel } = message
+  if (message.content.startsWith("!dl") && message.guild) {
+    const messages = await channel.messages.fetch({ limit: 100 })
+    const mentionMembers = await message.mentions.members.map((m) => m.user.id)
     const mentionFilter = await messages.filter((msg) =>
-      mentionMembers.some((userID) => userID == msg.author.id)
-    );
+      mentionMembers.some((userID) => userID === msg.author.id)
+    )
     await channel.send({
       content: `<@${mentionMembers}>の直近100件のメッセージを消しました`,
       ephemeral: true,
-    });
-    channel.bulkDelete(mentionFilter); // それらのメッセージを一括削除
+    })
+    channel.bulkDelete(mentionFilter) // それらのメッセージを一括削除
   }
 
   if (message.content === "9192631770") {
     const members = await message.guild.members.fetch(); // メンバーを全員取得
     await members.map(async (member) => {
-      await member.roles.add("1049170550758576248");
-      await channel.send(`${member.displayName}に付与`);
-    });
+      await member.roles.add('1049170550758576248')
+      await channel.send(`${member.displayName}に付与`)
+    })
   }
 
-  if (message.content === "jumpPoint") {
-    const buttons = JumpPointBuilder();
-    await showComponent(channel, buttons, "飛べるよ");
+  if (message.content === 'jumpPoint') {
+    const buttons = JumpPointBuilder()
+    await showComponent(channel, buttons, '飛べるよ')
   }
 
-  if (message.content === "createRoomButton") {
-    const CreateRoomButton = CreateRoomButtonBuilder();
+  if (message.content === 'createRoomButton') {
+    const CreateRoomButton = CreateRoomButtonBuilder()
     await showComponent(
       channel,
       CreateRoomButton,
-      "ボタンを押せば部屋が作られるよ"
-    );
+      'ボタンを押せば部屋が作られるよ'
+    )
   }
 
-  if (message.content === "createGumaButton") {
-    const { buttons, tierList } = GumaButtonsBuilder();
+  if (message.content === 'createGumaButton') {
+    const { buttons, tierList } = GumaButtonsBuilder()
     await showComponent(
       channel,
       buttons,
-      "下のボタンから利用したい機能を選んでください"
-    );
+      '下のボタンから利用したい機能を選んでください'
+    )
     await showComponent(
       channel,
       tierList,
-      "ティアリストを見たい方はこちらで選んでください"
-    );
+      'ティアリストを見たい方はこちらで選んでください'
+    )
   }
-  if (serverInfo.some((server) => server.guildId == message.guild.id)) {
-    if (serverInfo.some((server) => server.sleepText == message.channelId)) {
+  if (serverInfo.some((server) => server.guildId === message.guild.id)) {
+    if (serverInfo.some((server) => server.sleepText === message.channelId)) {
       const server = serverInfo.find(
-        (server) => server.guildId == message.guild.id
+        (server) => server.guildId === message.guild.id
       );
       const sleepText = message.guild.channels.cache.get(server.sleepText);
       const memberChk = message.mentions.members.size !== 1;
@@ -171,20 +169,19 @@ client.on("messageCreate", async (message) => {
 
           await member.voice.setChannel(sleepChannel);
           return sleepText.send(`${member}を寝落ち部屋に送ったよ！`);
-          break;
       }
     }
   }
-});
+})
 
-client.on("voiceStateUpdate", async (oldState, newState) => {
-  if (serverInfo.some((server) => server.guildId == newState.guild.id)) {
+client.on('voiceStateUpdate', async (oldState, newState) => {
+  if (serverInfo.some((server) => server.guildId === newState.guild.id)) {
     if (
       createChannels.some((channel) => channel.vc.id === oldState.channelId)
     ) {
       const newVCId = oldState.channel.id;
       const isChangeChannel =
-        oldState.channelId != undefined && newState.channelId != undefined;
+        oldState.channelId !== undefined && newState.channelId !== undefined;
       if (isChangeChannel) {
         const channelset = createChannels.find((channelset) => {
           if (channelset.vc) {
@@ -215,7 +212,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   }
   if (createChannels.some((channel) => channel.vc.id === oldState.channelId)) {
     const isLeaveChannel =
-      oldState.channelId != undefined && newState.channelId == undefined;
+      oldState.channelId !== undefined && newState.channelId === undefined
     if (isLeaveChannel) {
       const newVCId = oldState.channel.id;
       const channelset = createChannels.find((channelset) => {
@@ -244,11 +241,11 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       }
     }
   }
-});
+})
 
-client.on("interactionCreate", async (interaction) => {
+client.on('interactionCreate', async (interaction) => {
   const server = serverInfo.find(
-    (server) => server.guildId == interaction.guild.id
+    (server) => server.guildId === interaction.guild.id
   );
 
   if (interaction.isChatInputCommand()) {
@@ -276,7 +273,7 @@ client.on("interactionCreate", async (interaction) => {
     const modal = ReNameModalBuilder();
     await interaction.showModal(modal); // 5
   }
-  if (interaction.customId == "ReNameModalFom") {
+  if (interaction.customId === "ReNameModalFom") {
     const TCId = interaction.channel.id;
 
     const channelset = createChannels.find((channelset) => {
@@ -298,30 +295,30 @@ client.on("interactionCreate", async (interaction) => {
     });
     return;
   }
-  if (interaction.customId == "memberLimitSet") {
-    const modal = MemberLimitSetModalBuilder();
-    await interaction.showModal(modal); // 5
+  if (interaction.customId === 'memberLimitSet') {
+    const modal = MemberLimitSetModalBuilder()
+    await interaction.showModal(modal) // 5
   }
-  if (interaction.customId == "memberLimitSetFom") {
-    const nowVc = interaction.member.voice.channel;
-    const value = interaction.fields.getTextInputValue("setLimit");
-    await nowVc.setUserLimit(value);
+  if (interaction.customId === 'memberLimitSetFom') {
+    const nowVc = interaction.member.voice.channel
+    const value = interaction.fields.getTextInputValue('setLimit')
+    await nowVc.setUserLimit(value)
     interaction.reply({
-      content: "人数上限を変更しました。",
+      content: '人数上限を変更しました。',
       ephemeral: true,
-    });
+    })
   }
-  if (interaction.customId == "roomButton") {
-    const modal = SetRoomNameModalBuilder();
-    await interaction.showModal(modal); // 5
+  if (interaction.customId === 'roomButton') {
+    const modal = SetRoomNameModalBuilder()
+    await interaction.showModal(modal) // 5
   }
-  if (interaction.customId == "RoomButtonFom") {
+  if (interaction.customId === "RoomButtonFom") {
     const value = interaction.fields.getTextInputValue("roomName");
     const newVc = await interaction.guild.channels.create({
       name: `${value}`,
       type: ChannelType.GuildVoice,
       parent: server.createRoomCategory,
-    });
+    })
     const newTc = await interaction.guild.channels.create({
       name: `${value}`,
       type: ChannelType.GuildText,
@@ -330,7 +327,7 @@ client.on("interactionCreate", async (interaction) => {
 
     await newTc.setTopic(newVc.id);
     interaction.reply({
-      content: "生成しました",
+      content: '生成しました',
       ephemeral: true,
     });
     createChannels.push({ vc: newVc, tc: newTc });
@@ -341,44 +338,44 @@ client.on("interactionCreate", async (interaction) => {
       `${interaction.member}\n以下のボタンから操作を選んでください\n部屋名の変更は10分間に一回のみなので、エラーが出た場合は10分後に再度お試し下さい`
     );
   }
-  if (interaction.customId == "buildButton") {
-    const championBuildSearchModal = ChampionBuildSearchModalBuilder();
-    await interaction.showModal(championBuildSearchModal); // 5
+  if (interaction.customId === 'buildButton') {
+    const championBuildSearchModal = ChampionBuildSearchModalBuilder()
+    await interaction.showModal(championBuildSearchModal) // 5
   }
-  if (interaction.customId == "buildButtonFom") {
+  if (interaction.customId === 'buildButtonFom') {
     const searchChampionName =
-      interaction.fields.getTextInputValue("searchChampionName");
+      interaction.fields.getTextInputValue('searchChampionName')
 
-    replayChampionInfoURL(interaction, "build", searchChampionName);
+    replayChampionInfoURL(interaction, 'build', searchChampionName)
   }
-  if (interaction.customId == "matchUpButton") {
-    const modal = ChampionMatchUpSearchModalBuilder();
-    await interaction.showModal(modal); // 5
+  if (interaction.customId === 'matchUpButton') {
+    const modal = ChampionMatchUpSearchModalBuilder()
+    await interaction.showModal(modal) // 5
   }
-  if (interaction.customId == "matchupButtonFom") {
+  if (interaction.customId === 'matchupButtonFom') {
     const searchChampionName = interaction.fields.getTextInputValue(
-      "matchUpSearchChampionName"
-    );
+      'matchUpSearchChampionName'
+    )
 
-    replayChampionInfoURL(interaction, "counters", searchChampionName);
-    return;
+    replayChampionInfoURL(interaction, 'counters', searchChampionName)
+    return
   }
 
-  if (interaction.customId == "opggButton") {
-    const opggModal = OpggModalBuilder();
-    await interaction.showModal(opggModal);
+  if (interaction.customId === 'opggButton') {
+    const opggModal = OpggModalBuilder()
+    await interaction.showModal(opggModal)
   }
 
-  if (interaction.customId == "opggButtonFom") {
+  if (interaction.customId === 'opggButtonFom') {
     const searchSamonerName =
-      interaction.fields.getTextInputValue("samonerName");
+      interaction.fields.getTextInputValue('samonerName')
 
     interaction.reply({
       content: `${searchSamonerName}の情報ですね？\n https://www.op.gg/summoners/jp/${searchSamonerName}`,
       ephemeral: true,
-    });
+    })
   }
-});
+})
 
 client.on("error", async (error) => {
   const errorChannel = await client.channels.fetch("1059064447827722302");
